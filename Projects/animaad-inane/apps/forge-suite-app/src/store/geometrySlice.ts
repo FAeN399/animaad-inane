@@ -1,12 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
-// Define MeshAsset type
-export interface MeshAsset {
-  id: string;
-  name: string;
-  buffer: ArrayBuffer;
-  matrix: number[];
-}
+import { MeshAsset } from '../interfaces/Asset';
 
 // Define the state type
 export interface GeometryState {
