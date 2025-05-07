@@ -1,0 +1,5 @@
+{
+  // ...existing settings...
+  "cody.serverEndpoint": "http://localhost:11434",
+  "cody.autocomplete.provider": "ollama"
+}
