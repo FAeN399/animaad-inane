@@ -1,4 +1,5 @@
-import { Grid } from '@react-three/drei';
+import { Grid, Environment } from '@react-three/drei';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { useAppSelector } from '../../store/hooks';
 import SceneCanvasBase from '../../ui/core/SceneCanvasBase';
 
@@ -8,10 +9,25 @@ interface SceneCanvasProps {
 
 export const SceneCanvas = ({ children }: SceneCanvasProps) => {
   const theme = useAppSelector(state => state.settings.theme);
+  const selectedMaterial = useAppSelector(
+    state => state.geometry.assets[state.geometry.selectedAssetId || '']?.material
+  );
+  const emissiveIntensity = selectedMaterial?.emissiveIntensity || 0;
   const backgroundColor = theme === 'dark' ? '#1a1a1a' : '#f0f0f0';
   
   return (
     <SceneCanvasBase backgroundColor={backgroundColor}>
+      {/* Environment and lighting */}
+      <Environment preset="sunset" background={false} />
+      <ambientLight intensity={0.5} />
+      <directionalLight
+        castShadow
+        intensity={1}
+        position={[5, 10, 7.5]}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      />
+      
       {/* Default placeholder objects */}
       {!children && (
         <>
@@ -34,8 +50,15 @@ export const SceneCanvas = ({ children }: SceneCanvasProps) => {
         </>
       )}
       
-      {/* Render children if provided */}
-      {children}
+      {/* Render children if provided with postprocessing */}
+      {children && (
+        <>
+          {children}
+          <EffectComposer>
+            <Bloom luminanceThreshold={0.2} intensity={emissiveIntensity} mipmapBlur />
+          </EffectComposer>
+        </>
+      )}
     </SceneCanvasBase>
   );
 };

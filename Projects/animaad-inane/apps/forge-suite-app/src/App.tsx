@@ -20,6 +20,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/geometry" element={<GeometryPage />} />
+            <Route path="/geometry/:id" element={<GeometryPage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/mandala" element={<MandalaPage />} />
           </Routes>

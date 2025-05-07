@@ -26,6 +26,7 @@
     "react-router-dom": "^7.5.3",
     "react-toastify": "^11.0.5",
     "three": "^0.176.0",
+    "three-bvh-csg": "^0.0.17",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -37,6 +38,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/redux-mock-store": "^1.5.0",
     "@vitejs/plugin-react-swc": "^3.8.0",
     "@vitest/ui": "^3.1.2",
     "eslint": "^9.22.0",
@@ -44,6 +46,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
     "jsdom": "^26.1.0",
+    "redux-mock-store": "^1.5.5",
     "resize-observer-polyfill": "^1.5.1",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.26.1",

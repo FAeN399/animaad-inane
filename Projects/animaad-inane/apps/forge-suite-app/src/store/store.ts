@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import settingsReducer from './settingsSlice';
-import geometryReducer from '../modules/geometry/store/geometrySlice';
+import geometryReducer from './geometrySlice';
 import mandalaReducer from '../modules/mandala/store/mandalaSlice';
-import mapReducer from '../modules/map/store/mapSlice';
+import mapReducer from './mapSlice';
 import hubReducer from '../modules/hub/store/hubSlice';
+import undoableReducer from './undoableSlice';
+import { undoableMiddleware } from './undoableMiddleware';
 
 export const store = configureStore({
   reducer: {
@@ -12,7 +14,9 @@ export const store = configureStore({
     mandala: mandalaReducer,
     map: mapReducer,
     hub: hubReducer,
+    undoable: undoableReducer,
   },
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(undoableMiddleware),
 });
 
 // Define RootState and AppDispatch types
