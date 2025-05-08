@@ -1,3 +1,4 @@
+// Hex data for map editor
 export interface HexData {
   q: number;
   r: number;

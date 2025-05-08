@@ -76,12 +76,12 @@ Okay, here is a detailed `todo.md` checklist based on the refined iterative impl
 ## Phase 2: Geometry Module Polish (Sprint 2)
 
 - [x] **Step 2.1 (Material Panel - Basic):**
-  - [ ] Create `MaterialPanel` component.
-  - [ ] Add UI controls (color picker, sliders) for BaseColor, Metallic, Roughness.
-  - [ ] Connect controls to view/edit selected mesh's material properties.
-  - [ ] Add relevant state/reducers to `geometrySlice` for material properties.
-  - [ ] Dispatch undoable actions to update material properties in Redux.
-  - [ ] Ensure material updates visually in the scene.
+  - [x] Create `MaterialPanel` component.
+  - [x] Add UI controls (color picker, sliders) for BaseColor, Metallic, Roughness.
+  - [x] Connect controls to view/edit selected mesh's material properties.
+  - [x] Add relevant state/reducers to `geometrySlice` for material properties.
+  - [x] Dispatch undoable actions to update material properties in Redux.
+  - [x] Ensure material updates visually in the scene.
 - [x] **Step 2.2 (Effects - Basic):**
   - [x] Integrate `@react-three/postprocessing`.
   - [x] Add `EffectComposer` and `Bloom` effect to `<SceneCanvas>`.
@@ -99,46 +99,46 @@ Okay, here is a detailed `todo.md` checklist based on the refined iterative impl
 
 ## Phase 3: Map Editor Core (Sprint 5)
 
-- [ ] **Step 3.1 (Hex Grid Utilities):**
-  - [ ] Create `src/utils/hexGrid.ts`.
-  - [ ] Implement **pointy-top axial coordinate** functions:
-    - [ ] `axialToCube(q, r)`
-    - [ ] `cubeToAxial(x, y, z)`
-    - [ ] `cubeRound(x, y, z)`
-    - [ ] `axialRound(fractQ, fractR)`
-    - [ ] `axialToPixelPointyTop(q, r, size)`
-    - [ ] `pixelToAxialPointyTop(x, y, size)`
-    - [ ] `axialDistance(q1, r1, q2, r2)`
-    - [ ] `getAxialNeighbors(q, r)`
-  - [ ] TDD: Write comprehensive unit tests for *all* hex grid utility functions (`hexGrid.test.ts`).
-- [ ] **Step 3.2 (Map State & Instanced Rendering):**
-  - [ ] Define `HexData` interface (`src/interfaces/MapData.ts`).
-  - [ ] Update `mapSlice` state (`hexes: { [key: string]: HexData }`).
-  - [ ] Add `setHexData` reducer (TDD: adds/updates hex using "q,r" key).
-  - [ ] Create `HexGrid` component:
-    - [ ] Define base pointy-top hexagon `BufferGeometry`.
-    - [ ] Render `<InstancedMesh>`.
-    - [ ] Select `hexes` from Redux.
-    - [ ] Use `useEffect`/`useMemo` to update instance count and matrices based on `hexes` data and `axialToPixelPointyTop`.
-  - [ ] Integrate `HexGrid` into `MapPage` within `<SceneCanvas>`.
-  - [ ] Add temporary buttons in `MapPage` to dispatch `setHexData` for testing.
-- [ ] **Step 3.3 (Terrain Palette & Painting):**
-  - [ ] Create `TerrainPalette` component (select active terrain type, store in local/UI state).
-  - [ ] Implement pointer event handling (`onPointerDown/Move/Up/Leave`) on map canvas/ground plane.
-  - [ ] Implement painting logic (`handlePaint`):
-    - [ ] Get intersection point (`event.point`).
-    - [ ] Convert point to hex coords (`pixelToAxialPointyTop` -> `axialRound`).
-    - [ ] Get active terrain type.
-    - [ ] Dispatch `setHexData` with coords, terrain, defaults.
-    - [ ] Optimize to avoid dispatching for same hex during drag.
-  - [ ] Update `HexGrid` to set instance color based on `HexData.terrain`.
-  - [ ] Render `TerrainPalette` in `MapPage`.
-  - [ ] TDD: Test `TerrainPalette` and painting logic component (mock utils, dispatch).
-- [ ] **Step 3.4 (Undo/Redo - Map Painting):**
-  - [ ] Refactor `setHexData` into an undoable action/Thunk.
-  - [ ] Payload must include previous state of the hex being modified.
-  - [ ] Update `undoableMiddleware` to handle map hex data changes.
-  - [ ] *Manual Test:* Verify terrain painting is undoable/redoable.
+- [x] **Step 3.1 (Hex Grid Utilities):**
+  - [x] Create `src/utils/hexGrid.ts`.
+  - [x] Implement **pointy-top axial coordinate** functions:
+    - [x] `axialToCube(q, r)`
+    - [x] `cubeToAxial(x, y, z)`
+    - [x] `cubeRound(x, y, z)`
+    - [x] `axialRound(fractQ, fractR)`
+    - [x] `axialToPixelPointyTop(q, r, size)`
+    - [x] `pixelToAxialPointyTop(x, y, size)`
+    - [x] `axialDistance(q1, r1, q2, r2)`
+    - [x] `getAxialNeighbors(q, r)`
+  - [x] TDD: Write comprehensive unit tests for *all* hex grid utility functions (`hexGrid.test.ts`).
+- [x] **Step 3.2 (Map State & Instanced Rendering):**
+  - [x] Define `HexData` interface (`src/interfaces/MapData.ts`).
+  - [x] Update `mapSlice` state (`hexes: { [key: string]: HexData }`).
+  - [x] Add `setHexData` reducer (TDD: adds/updates hex using "q,r" key).
+  - [x] Create `HexGrid` component:
+    - [x] Define base pointy-top hexagon `BufferGeometry`.
+    - [x] Render `<InstancedMesh>`.
+    - [x] Select `hexes` from Redux.
+    - [x] Use `useEffect`/`useMemo` to update instance count and matrices based on `hexes` data and `axialToPixelPointyTop`.
+  - [x] Integrate `HexGrid` into `MapPage` within `<SceneCanvas>`.
+  - [x] Add temporary buttons in `MapPage` to dispatch `setHexData` for testing.
+- [x] **Step 3.3 (Terrain Palette & Painting):**
+  - [x] Create `TerrainPalette` component (select active terrain type, store in local/UI state).
+  - [x] Implement pointer event handling (`onPointerDown/Move/Up/Leave`) on map canvas/ground plane.
+  - [x] Implement painting logic (`handlePaint`):
+    - [x] Get intersection point (`event.point`).
+    - [x] Convert point to hex coords (`pixelToAxialPointyTop` -> `axialRound`).
+    - [x] Get active terrain type.
+    - [x] Dispatch `setHexData` with coords, terrain, defaults.
+    - [x] Optimize to avoid dispatching for same hex during drag.
+  - [x] Update `HexGrid` to set instance color based on `HexData.terrain`.
+  - [x] Render `TerrainPalette` in `MapPage`.
+  - [x] TDD: Test `TerrainPalette` and painting logic component (mock utils, dispatch).
+- [x] **Step 3.4 (Undo/Redo - Map Painting):**
+  - [x] Refactor `setHexData` into an undoable action/Thunk.
+  - [x] Payload must include previous state of the hex being modified.
+  - [x] Update `undoableMiddleware` to handle map hex data changes.
+  - [x] *Manual Test:* Verify terrain painting is undoable/redoable.
 - [ ] **Step 3.5 (Basic Export - PNG/JSON):**
   - [ ] Implement PNG export function (render 2D map view to image).
   - [ ] Implement JSON export function (serialize `hexes` data).

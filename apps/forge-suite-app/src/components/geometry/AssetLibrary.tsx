@@ -1,57 +1,53 @@
 import React from 'react';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { saveToLibrary, removeFromLibrary, createFromLibrary } from '../../store/geometrySlice';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { librarySelector, selectedAssetIdSelector } from '../../store/selectors/geometrySelectors';
+import { saveToLibrary, createFromLibrary } from '../../store/geometrySlice';
 import { v4 as uuidv4 } from 'uuid';
 
 const AssetLibrary: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { assets, library } = useAppSelector(state => state.geometry);
+  const libraryAssets = useAppSelector(librarySelector);
+  const selectedId = useAppSelector(selectedAssetIdSelector);
+
+  const handleSaveSelected = () => {
+    if (selectedId) {
+      dispatch(saveToLibrary({ id: selectedId }));
+    }
+  };
+
+  const handleCreateInstance = (libraryAssetId: string) => {
+    const newId = uuidv4();
+    const libraryAsset = libraryAssets[libraryAssetId];
+    if (libraryAsset) {
+      // Attempt to find a unique name for the instance
+      let instanceNumber = 1;
+      let newName = `${libraryAsset.name} (Instance ${instanceNumber})`;
+      const allAssetNames = Object.values(useAppSelector.getState().geometry.assets).map(asset => asset.name);
+      while (allAssetNames.includes(newName)) {
+        instanceNumber++;
+        newName = `${libraryAsset.name} (Instance ${instanceNumber})`;
+      }
+      dispatch(createFromLibrary({ id: libraryAssetId, newId, newName }));
+    }
+  };
 
   return (
-    <div className="asset-library" style={{ marginTop: '16px', border: '1px solid #ddd', padding: '8px' }}>
-      <h3>Asset Library</h3>
-      {/* Save current assets to library */}
-      <div style={{ marginBottom: '12px' }}>
-        <strong>Assets:</strong>
-        {Object.values(assets).map(asset => (
-          <div key={asset.id} style={{ display: 'flex', alignItems: 'center', marginTop: '4px' }}>
-            <span style={{ flex: 1 }}>{asset.name}</span>
-            {library[asset.id] ? (
-              <em style={{ fontSize: '0.9em', color: '#666' }}>Saved</em>
-            ) : (
-              <button onClick={() => dispatch(saveToLibrary({ id: asset.id }))} style={{ marginLeft: '8px' }}>
-                Save
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-      {/* Instantiate or remove library entries */}
-      <div>
-        <strong>Library:</strong>
-        {Object.values(library).length === 0 && <div>No saved assets.</div>}
-        {Object.values(library).map(lib => (
-          <div key={lib.id} style={{ display: 'flex', alignItems: 'center', marginTop: '4px' }}>
-            <span style={{ flex: 1 }}>{lib.name}</span>
-            <button
-              onClick={() => {
-                const newId = uuidv4();
-                const newName = lib.name.replace(/\.glb?$/i, '') + '-copy.glb';
-                dispatch(createFromLibrary({ id: lib.id, newId, newName }));
-              }}
-              style={{ marginLeft: '8px' }}
-            >
-              Instantiate
+    <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '5px', marginTop: '10px' }}>
+      <h4>Asset Library</h4>
+      <button onClick={handleSaveSelected} disabled={!selectedId} style={{ marginBottom: '10px' }}>
+        Save Selected to Library
+      </button>
+      {Object.keys(libraryAssets).length === 0 && <p>No assets in library.</p>}
+      <ul style={{ listStyle: 'none', padding: 0 }}>
+        {Object.values(libraryAssets).map((asset) => (
+          <li key={asset.id} style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{asset.name}</span>
+            <button onClick={() => handleCreateInstance(asset.id)}>
+              Create Instance
             </button>
-            <button
-              onClick={() => dispatch(removeFromLibrary({ id: lib.id }))}
-              style={{ marginLeft: '4px' }}
-            >
-              Remove
-            </button>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 };

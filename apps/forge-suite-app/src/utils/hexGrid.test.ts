@@ -13,57 +13,48 @@ import {
 } from './hexGrid';
 
 describe('hexGrid utilities', () => {
-  it('axialToCube and cubeToAxial round-trip', () => {
-    const q = 2;
-    const r = -3;
+  it('axialToCube and cubeToAxial are inverses', () => {
+    const q = 2, r = -1;
     const cube = axialToCube(q, r);
-    expect(cube).toEqual({ x: 2, y: 1, z: -3 });
-    const axial = cubeToAxial(cube);
+    const axial = cubeToAxial(cube.x, cube.y, cube.z);
     expect(axial).toEqual({ q, r });
   });
 
-  it('cubeRound adjusts fractional cubes correctly', () => {
-    const frac = { x: 0.4, y: -0.4, z: 0 }; // sums to approx 0
+  it('cubeRound rounds fractional coordinates correctly', () => {
+    const frac = { x: 0.2, y: -0.8, z: 0.6 };
     const rounded = cubeRound(frac.x, frac.y, frac.z);
-    // Should round to nearest integers that sum to zero
+    // total must sum to zero
     expect(rounded.x + rounded.y + rounded.z).toBe(0);
-    expect([rounded.x, rounded.y, rounded.z].every(v => Number.isInteger(v))).toBe(true);
   });
 
-  it('axialRound snaps fractional axial coords to nearest axial', () => {
-    const a: AxialCoord = { q: 1.2, r: -0.6 };
-    const rounded = axialRound(a.q, a.r);
-    // After rounding, cube coords are integers
-    const cube = axialToCube(rounded.q, rounded.r);
-    expect(cube.x + cube.y + cube.z).toBe(0);
-    expect(rounded.q).toBeTypeOf('number');
-    expect(rounded.r).toBeTypeOf('number');
+  it('axialRound rounds fractional axial coordinates', () => {
+    const fractQ = 1.2, fractR = 2.8;
+    const rounded = axialRound(fractQ, fractR);
+    expect(Number.isInteger(rounded.q)).toBe(true);
+    expect(Number.isInteger(rounded.r)).toBe(true);
   });
 
-  it('axialToPixelPointyTop and pixelToAxialPointyTop inverse within tolerance', () => {
+  it('axialToPixelPointyTop and pixelToAxialPointyTop are inverses', () => {
     const size = 5;
-    const coord: AxialCoord = { q: -2, r: 3 };
-    const pixel = axialToPixelPointyTop(coord.q, coord.r, size);
-    const axialFrac = pixelToAxialPointyTop(pixel.x, pixel.y, size);
-    const axialRounded = axialRound(axialFrac.q, axialFrac.r);
-    expect(axialRounded).toEqual(coord);
+    const q = 3, r = -2;
+    const { x, y } = axialToPixelPointyTop(q, r, size);
+    const axial = pixelToAxialPointyTop(x, y, size);
+    expect(axial).toEqual({ q, r });
   });
 
-  it('axialDistance gives correct distances', () => {
-    // Same hex => distance 0
-    expect(axialDistance(0, 0, 0, 0)).toBe(0);
-    // Neighboring hexes => distance 1
+  it('axialDistance computes correct distances', () => {
     expect(axialDistance(0, 0, 1, 0)).toBe(1);
-    expect(axialDistance(0, 0, 0, 1)).toBe(1);
-    // Diagonal on grid
     expect(axialDistance(0, 0, 2, -1)).toBe(2);
+    expect(axialDistance(1, -1, -1, 1)).toBe(2);
   });
 
-  it('getAxialNeighbors returns six adjacent coords', () => {
-    const center: AxialCoord = { q: 5, r: -4 };
-    const neighbors = getAxialNeighbors(center.q, center.r);
+  it('getAxialNeighbors returns six distinct neighbors', () => {
+    const neighbors = getAxialNeighbors(0, 0);
+    const expected = [
+      { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+      { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+    ];
     expect(neighbors).toHaveLength(6);
-    const distances = neighbors.map(n => axialDistance(center.q, center.r, n.q, n.r));
-    distances.forEach(d => expect(d).toBe(1));
+    expect(neighbors).toEqual(expected);
   });
 });

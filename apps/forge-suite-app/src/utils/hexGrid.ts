@@ -1,30 +1,30 @@
 // filepath: src/utils/hexGrid.ts
+
+// Hex grid utilities (pointy-top axial coordinates)
+
+/** Cube coordinates */
 export interface CubeCoord { x: number; y: number; z: number; }
+/** Axial coordinates */
 export interface AxialCoord { q: number; r: number; }
 
-// Convert axial to cube coordinates
+/** Convert axial to cube coordinates */
 export function axialToCube(q: number, r: number): CubeCoord {
-  const x = q;
-  const z = r;
-  const y = -x - z;
-  return { x, y, z };
+  return { x: q, y: -q - r, z: r };
 }
 
-// Convert cube to axial coordinates
-export function cubeToAxial({ x, z }: CubeCoord): AxialCoord {
+/** Convert cube to axial coordinates */
+export function cubeToAxial(x: number, y: number, z: number): AxialCoord {
   return { q: x, r: z };
 }
 
-// Round cube coordinates to nearest integer cube coordinate
+/** Round fractional cube coordinates to nearest integer cube coordinates */
 export function cubeRound(x: number, y: number, z: number): CubeCoord {
   let rx = Math.round(x);
   let ry = Math.round(y);
   let rz = Math.round(z);
-
   const xDiff = Math.abs(rx - x);
   const yDiff = Math.abs(ry - y);
   const zDiff = Math.abs(rz - z);
-
   if (xDiff > yDiff && xDiff > zDiff) {
     rx = -ry - rz;
   } else if (yDiff > zDiff) {
@@ -32,44 +32,40 @@ export function cubeRound(x: number, y: number, z: number): CubeCoord {
   } else {
     rz = -rx - ry;
   }
-
   return { x: rx, y: ry, z: rz };
 }
 
-// Round axial coordinates (fractional) to nearest axial coordinate using cube round
-export function axialRound(q: number, r: number): AxialCoord {
-  const cube = axialToCube(q, r);
-  const rounded = cubeRound(cube.x, cube.y, cube.z);
-  return cubeToAxial(rounded);
+/** Round fractional axial coordinates to nearest axial coordinates */
+export function axialRound(fractQ: number, fractR: number): AxialCoord {
+  const { x, z } = cubeRound(fractQ, -fractQ - fractR, fractR);
+  return { q: x, r: z };
 }
 
-// Convert axial to pixel coordinates (pointy-top orientation)
+/** Convert axial coordinates to pixel coordinates (pointy-top) */
 export function axialToPixelPointyTop(q: number, r: number, size: number): { x: number; y: number } {
   const x = size * Math.sqrt(3) * (q + r / 2);
   const y = size * (3 / 2) * r;
   return { x, y };
 }
 
-// Convert pixel to fractional axial coordinates (pointy-top orientation)
+/** Convert pixel coordinates to axial coordinates (pointy-top) */
 export function pixelToAxialPointyTop(x: number, y: number, size: number): AxialCoord {
-  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / size;
+  const q = (x * Math.sqrt(3) / 3 - y / 3) / size;
   const r = (2 / 3 * y) / size;
-  return { q, r };
+  return axialRound(q, r);
 }
 
-// Calculate distance between two axial coordinates
+/** Compute distance between two hexes in axial coordinates */
 export function axialDistance(q1: number, r1: number, q2: number, r2: number): number {
-  const c1 = axialToCube(q1, r1);
-  const c2 = axialToCube(q2, r2);
-  // Cube distance formula
-  return (Math.abs(c1.x - c2.x) + Math.abs(c1.y - c2.y) + Math.abs(c1.z - c2.z)) / 2;
+  const a = axialToCube(q1, r1);
+  const b = axialToCube(q2, r2);
+  return (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z)) / 2;
 }
 
-// Get axial neighbors for pointy-top axial coordinates
+/** Get the six neighboring axial coordinates */
 export function getAxialNeighbors(q: number, r: number): AxialCoord[] {
-  const directions: AxialCoord[] = [
-    { q: +1, r: 0 }, { q: +1, r: -1 }, { q: 0, r: -1 },
-    { q: -1, r: 0 }, { q: -1, r: +1 }, { q: 0, r: +1 }
+  const directions: [number, number][] = [
+    [1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]
   ];
-  return directions.map(d => ({ q: q + d.q, r: r + d.r }));
+  return directions.map(([dq, dr]) => ({ q: q + dq, r: r + dr }));
 }

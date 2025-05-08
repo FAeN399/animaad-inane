@@ -1,4 +1,4 @@
-import mapReducer, { setHexData, MapState } from './mapSlice';
+import mapReducer, { setHexData, MapState, updateHexData } from './mapSlice';
 import { configureStore } from '@reduxjs/toolkit';
 import undoableReducer, { undo, redo } from './undoableSlice';
 import { undoableMiddleware } from './undoableMiddleware';

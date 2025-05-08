@@ -1,36 +1,55 @@
 import React from 'react';
 
-interface TerrainPaletteProps {
-  activeTerrain: string;
-  onSelect: (terrain: string) => void;
-}
-
-const TERRAIN_TYPES = [
-  { name: 'Grass', value: 'grass', color: '#4caf50' },
-  { name: 'Water', value: 'water', color: '#2196f3' },
-  { name: 'Sand', value: 'sand', color: '#ffeb3b' },
+// Define terrain types and their display properties
+export const TERRAIN_TYPES = [
+  { id: 'grass', name: 'Grass', color: '#4CAF50' },
+  { id: 'water', name: 'Water', color: '#2196F3' },
+  { id: 'sand', name: 'Sand', color: '#FFC107' },
+  { id: 'rock', name: 'Rock', color: '#795548' },
+  { id: 'snow', name: 'Snow', color: '#ECEFF1' },
+  { id: 'forest', name: 'Forest', color: '#388E3C' }
 ];
 
-const TerrainPalette: React.FC<TerrainPaletteProps> = ({ activeTerrain, onSelect }) => (
-  <div className="terrain-palette" style={{ marginBottom: '16px', padding: '8px', border: '1px solid #ddd' }}>
-    <h3>Terrain Palette</h3>
-    <div style={{ display: 'flex', gap: '8px' }}>
-      {TERRAIN_TYPES.map(type => (
-        <button
-          key={type.value}
-          onClick={() => onSelect(type.value)}
-          style={{
-            backgroundColor: type.color,
-            padding: '8px',
-            border: activeTerrain === type.value ? '2px solid #000' : '1px solid #ccc',
-            cursor: 'pointer'
-          }}
-        >
-          {type.name}
-        </button>
-      ))}
+export interface TerrainPaletteProps {
+  selectedTerrain: string;
+  onSelectTerrain: (terrain: string) => void;
+}
+
+/**
+ * TerrainPalette component for selecting terrain types in the map editor
+ */
+const TerrainPalette: React.FC<TerrainPaletteProps> = ({ 
+  selectedTerrain,
+  onSelectTerrain
+}) => {
+  return (
+    <div className="terrain-palette">
+      <h3>Terrain</h3>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+        {TERRAIN_TYPES.map(terrain => (
+          <div 
+            key={terrain.id}
+            onClick={() => onSelectTerrain(terrain.id)}
+            style={{
+              background: terrain.color,
+              color: ['snow', 'sand'].includes(terrain.id) ? '#333' : '#fff',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '80px',
+              border: selectedTerrain === terrain.id ? '2px solid #fff' : '2px solid transparent',
+              boxShadow: selectedTerrain === terrain.id ? '0 0 0 1px #000' : 'none'
+            }}
+          >
+            {terrain.name}
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default TerrainPalette;

@@ -1,275 +1,248 @@
-import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { selectedAssetIdSelector, selectedAssetSelector } from '../../store/selectors/geometrySelectors';
 import { updateMeshTransform } from '../../store/geometrySlice';
+import { toggleSnapping, setSnapTranslation, setSnapRotation, setSnapScale } from '../../store/settingsSlice';
+import type { SettingsState } from '../../store/settingsSlice';
 import * as THREE from 'three';
 
-// Create a new context for sharing transform mode state
-export const TransformModeContext = React.createContext<{
+// Define context for transform mode and snapping
+interface ITransformModeContext {
   mode: 'translate' | 'rotate' | 'scale';
   setMode: (mode: 'translate' | 'rotate' | 'scale') => void;
-  snapEnabled: boolean;
-  setSnapEnabled: (enabled: boolean) => void;
-}>({
-  mode: 'translate',
-  setMode: () => {},
-  snapEnabled: false,
-  setSnapEnabled: () => {}
-});
-
-interface Vector3InputProps {
-  label: string;
-  value: { x: number; y: number; z: number };
-  onChange: (axis: 'x' | 'y' | 'z', value: number) => void;
+  isSnapEnabled: boolean; // Renamed from snapEnabled to isSnapEnabled for clarity
+  toggleSnap: () => void;
 }
 
-const Vector3Input: React.FC<Vector3InputProps> = ({ label, value, onChange }) => {
-  return (
-    <div className="vector3-input" style={{ margin: '8px 0' }}>
-      <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{label}</label>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-        {['x', 'y', 'z'].map((axis) => (
-          <div key={axis} style={{ display: 'flex', alignItems: 'center' }}>
-            <label style={{ marginRight: '4px' }}>{axis.toUpperCase()}:</label>
-            <input
-              type="number"
-              value={value[axis as 'x' | 'y' | 'z']}
-              onChange={(e) => onChange(axis as 'x' | 'y' | 'z', parseFloat(e.target.value) || 0)}
-              style={{ width: '60px' }}
-              step={label === 'Scale' ? 0.1 : label === 'Rotation' ? 15 : 1}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+export const TransformModeContext = createContext<ITransformModeContext>({
+  mode: 'translate',
+  setMode: () => {},
+  isSnapEnabled: false,
+  toggleSnap: () => {},
+});
 
-export const TransformPanel: React.FC = () => {
+const TransformPanel: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { assets, selectedAssetId } = useAppSelector(state => state.geometry);
-  
-  // Local state for transform values
-  const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
-  const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 });
-  const [scale, setScale] = useState({ x: 1, y: 1, z: 1 });
-  
-  // State for transform mode - now exposed through context
-  const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
-  
-  // State for grid snapping
-  const [snapEnabled, setSnapEnabled] = useState(false);
-  
-  // Timer for debouncing updates
-  const [updateTimer, setUpdateTimer] = useState<NodeJS.Timeout | null>(null);
+  const selectedId = useAppSelector(selectedAssetIdSelector);
+  const selectedAsset = useAppSelector(selectedAssetSelector);
+  const { 
+    isSnappingEnabled, 
+    snapTranslation, 
+    snapRotation, 
+    snapScale 
+  } = useAppSelector((state: { settings: SettingsState }) => state.settings);
 
-  // Load transform values from the selected asset
+  const [currentMode, setCurrentMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
+  const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
+  const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 }); // Euler angles in degrees
+  const [scale, setScale] = useState({ x: 1, y: 1, z: 1 });
+
   useEffect(() => {
-    if (selectedAssetId && assets[selectedAssetId]) {
-      const asset = assets[selectedAssetId];
-      const matrix = new THREE.Matrix4().fromArray(asset.matrix);
-      
-      // Extract position, rotation, scale from matrix
-      const position = new THREE.Vector3();
-      const quaternion = new THREE.Quaternion();
-      const scale = new THREE.Vector3();
-      
-      matrix.decompose(position, quaternion, scale);
-      
-      // Convert quaternion to Euler angles (degrees)
-      const euler = new THREE.Euler().setFromQuaternion(quaternion);
-      const rotationDegrees = {
+    if (selectedAsset) {
+      const matrix = new THREE.Matrix4().fromArray(selectedAsset.matrix);
+      const pos = new THREE.Vector3();
+      const quat = new THREE.Quaternion();
+      const scl = new THREE.Vector3();
+      matrix.decompose(pos, quat, scl);
+
+      const euler = new THREE.Euler().setFromQuaternion(quat, 'XYZ');
+
+      setPosition({ x: pos.x, y: pos.y, z: pos.z });
+      setRotation({
         x: THREE.MathUtils.radToDeg(euler.x),
         y: THREE.MathUtils.radToDeg(euler.y),
-        z: THREE.MathUtils.radToDeg(euler.z)
-      };
-      
-      // Update local state
-      setPosition({ x: position.x, y: position.y, z: position.z });
-      setRotation(rotationDegrees);
-      setScale({ x: scale.x, y: scale.y, z: scale.z });
+        z: THREE.MathUtils.radToDeg(euler.z),
+      });
+      setScale({ x: scl.x, y: scl.y, z: scl.z });
+    } else {
+      // Reset to defaults if no asset is selected
+      setPosition({ x: 0, y: 0, z: 0 });
+      setRotation({ x: 0, y: 0, z: 0 });
+      setScale({ x: 1, y: 1, z: 1 });
     }
-  }, [selectedAssetId, assets]);
+  }, [selectedAsset]);
 
-  // Update transform matrix and dispatch to store
-  const updateTransform = () => {
-    if (!selectedAssetId) return;
+  const handleInputChange = (
+    axis: 'x' | 'y' | 'z',
+    type: 'position' | 'rotation' | 'scale',
+    value: string
+  ) => {
+    const numericValue = parseFloat(value); // Allow NaN for empty input
     
-    // Create matrix from components
-    const matrix = new THREE.Matrix4();
-    
-    // Create objects for transform composition
-    const positionVector = new THREE.Vector3(position.x, position.y, position.z);
-    
-    // Convert rotation from degrees to radians
-    const rotationRadians = {
-      x: THREE.MathUtils.degToRad(rotation.x),
-      y: THREE.MathUtils.degToRad(rotation.y),
-      z: THREE.MathUtils.degToRad(rotation.z)
-    };
-    const quaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(rotationRadians.x, rotationRadians.y, rotationRadians.z)
-    );
-    
-    const scaleVector = new THREE.Vector3(scale.x, scale.y, scale.z);
-    
-    // Compose the matrix
-    matrix.compose(positionVector, quaternion, scaleVector);
-    
-    // Dispatch update to store
-    dispatch(updateMeshTransform(selectedAssetId, Array.from(matrix.elements)));
-  };
-
-  // Handle position change
-  const handlePositionChange = (axis: 'x' | 'y' | 'z', value: number) => {
-    setPosition(prev => ({ ...prev, [axis]: value }));
-    scheduleUpdate();
-  };
-
-  // Handle rotation change
-  const handleRotationChange = (axis: 'x' | 'y' | 'z', value: number) => {
-    setRotation(prev => ({ ...prev, [axis]: value }));
-    scheduleUpdate();
-  };
-
-  // Handle scale change
-  const handleScaleChange = (axis: 'x' | 'y' | 'z', value: number) => {
-    setScale(prev => ({ ...prev, [axis]: value }));
-    scheduleUpdate();
-  };
-
-  // Debounced update scheduler
-  const scheduleUpdate = () => {
-    if (updateTimer) {
-      clearTimeout(updateTimer);
+    // Update local state for immediate feedback
+    switch (type) {
+      case 'position':
+        setPosition(prev => ({ ...prev, [axis]: numericValue }));
+        break;
+      case 'rotation':
+        setRotation(prev => ({ ...prev, [axis]: numericValue }));
+        break;
+      case 'scale':
+        setScale(prev => ({ ...prev, [axis]: numericValue }));
+        break;
     }
-    setUpdateTimer(setTimeout(() => {
-      updateTransform();
-      setUpdateTimer(null);
-    }, 300)); // Wait 300ms before dispatching
-  };
 
-  // Reset transform to identity
-  const handleReset = () => {
-    setPosition({ x: 0, y: 0, z: 0 });
-    setRotation({ x: 0, y: 0, z: 0 });
-    setScale({ x: 1, y: 1, z: 1 });
-    
-    // Create identity matrix
-    const identityMatrix = Array.from(new THREE.Matrix4().elements);
-    
-    if (selectedAssetId) {
-      dispatch(updateMeshTransform(selectedAssetId, identityMatrix));
+    // Defer Redux update until blur or if value is valid
+    if (selectedId && !isNaN(numericValue)) {
+        // Construct the new matrix based on the *updated local state*
+        const newPos = type === 'position' ? { ...position, [axis]: numericValue } : position;
+        const newRotDeg = type === 'rotation' ? { ...rotation, [axis]: numericValue } : rotation;
+        const newScl = type === 'scale' ? { ...scale, [axis]: numericValue } : scale;
+
+        const finalMatrix = new THREE.Matrix4().compose(
+            new THREE.Vector3(newPos.x, newPos.y, newPos.z),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(
+                THREE.MathUtils.degToRad(newRotDeg.x),
+                THREE.MathUtils.degToRad(newRotDeg.y),
+                THREE.MathUtils.degToRad(newRotDeg.z),
+                'XYZ'
+            )),
+            new THREE.Vector3(newScl.x, newScl.y, newScl.z)
+        );
+        dispatch(updateMeshTransform(selectedId, Array.from(finalMatrix.elements)));
     }
   };
+  
+  const handleInputBlur = (
+    axis: 'x' | 'y' | 'z',
+    type: 'position' | 'rotation' | 'scale'
+  ) => {
+    let stateValue: number;
+    let defaultValue: number;
 
-  // Handle transform mode change
-  const handleModeChange = (mode: 'translate' | 'rotate' | 'scale') => {
-    setTransformMode(mode);
+    switch (type) {
+        case 'position': stateValue = position[axis]; defaultValue = 0; break;
+        case 'rotation': stateValue = rotation[axis]; defaultValue = 0; break;
+        case 'scale': stateValue = scale[axis]; defaultValue = 1; break;
+        default: return;
+    }
+
+    if (isNaN(stateValue)) { // If input was cleared or invalid
+        handleInputChange(axis, type, defaultValue.toString());
+    } else if (selectedId) { // Ensure Redux is updated with the current valid local state on blur
+        const finalMatrix = new THREE.Matrix4().compose(
+            new THREE.Vector3(position.x, position.y, position.z),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(
+                THREE.MathUtils.degToRad(rotation.x),
+                THREE.MathUtils.degToRad(rotation.y),
+                THREE.MathUtils.degToRad(rotation.z),
+                'XYZ'
+            )),
+            new THREE.Vector3(scale.x, scale.y, scale.z)
+        );
+        dispatch(updateMeshTransform(selectedId, Array.from(finalMatrix.elements)));
+    }
   };
 
-  // Disable if no asset is selected
-  const isDisabled = !selectedAssetId;
+
+  const renderInputGroup = (label: string, type: 'position' | 'rotation' | 'scale', values: { x: number; y: number; z: number }) => (
+    <div style={{ marginBottom: '10px' }}>
+      <strong>{label}</strong>
+      {['x', 'y', 'z'].map((axis) => (
+        <div key={axis} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+          <label htmlFor={`${type}-${axis}`} style={{ marginRight: '5px', width: '10px' }}>{axis.toUpperCase()}:</label>
+          <input
+            id={`${type}-${axis}`}
+            type="number"
+            step={type === 'rotation' ? 1 : (type === 'position' ? snapTranslation : snapScale)}
+            value={isNaN(values[axis as 'x' | 'y' | 'z']) ? '' : values[axis as 'x' | 'y' | 'z'].toFixed(type === 'rotation' ? 0 : (type === 'position' ? 3 : 2))}
+            onChange={(e) => handleInputChange(axis as 'x' | 'y' | 'z', type, e.target.value)}
+            onBlur={() => handleInputBlur(axis as 'x' | 'y' | 'z', type)}
+            disabled={!selectedId}
+            style={{ width: '80px' }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+  
+  const contextValue = {
+    mode: currentMode,
+    setMode: setCurrentMode,
+    isSnapEnabled: isSnappingEnabled,
+    toggleSnap: () => dispatch(toggleSnapping()),
+  };
 
   return (
-    <TransformModeContext.Provider value={{ mode: transformMode, setMode: handleModeChange, snapEnabled, setSnapEnabled }}>
-      <div className="transform-panel" style={{ 
-        padding: '16px', 
-        border: '1px solid #ccc', 
-        borderRadius: '4px',
-        marginTop: '16px',
-        width: '100%',
-        opacity: isDisabled ? 0.5 : 1,
-        pointerEvents: isDisabled ? 'none' : 'auto'
-      }}>
-        {/* Grid snapping toggle */}
-        <div style={{ marginBottom: '12px' }}>
-          <label>
-            <input
-              type="checkbox"
-              checked={snapEnabled}
-              onChange={() => setSnapEnabled(prev => !prev)}
-              style={{ marginRight: '8px' }}
-            />
-            Snap to Grid
-          </label>
+    <TransformModeContext.Provider value={contextValue}>
+      <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '5px', width: '220px' }}>
+        <h4>Transform</h4>
+        <div style={{ marginBottom: '10px' }}>
+          <strong>Mode:</strong>
+          {['translate', 'rotate', 'scale'].map((m) => (
+            <button 
+              key={m}
+              onClick={() => setCurrentMode(m as 'translate' | 'rotate' | 'scale')}
+              disabled={!selectedId}
+              style={{ 
+                marginLeft: '5px', 
+                backgroundColor: currentMode === m ? '#007bff' : undefined,
+                color: currentMode === m ? 'white' : undefined,
+              }}
+            >
+              {m.charAt(0).toUpperCase() + m.slice(1)}
+            </button>
+          ))}
         </div>
-        <h3 style={{ marginTop: 0 }}>Transform</h3>
-        
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          marginBottom: '16px',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          overflow: 'hidden'
-        }}>
-          <button
-            onClick={() => handleModeChange('translate')}
-            style={{ 
-              flex: 1, 
-              padding: '8px', 
-              background: transformMode === 'translate' ? '#4a90e2' : 'transparent',
-              color: transformMode === 'translate' ? 'white' : 'inherit',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            Move (G)
-          </button>
-          <button
-            onClick={() => handleModeChange('rotate')}
-            style={{ 
-              flex: 1, 
-              padding: '8px', 
-              background: transformMode === 'rotate' ? '#4a90e2' : 'transparent',
-              color: transformMode === 'rotate' ? 'white' : 'inherit',
-              border: 'none',
-              borderLeft: '1px solid #ddd',
-              borderRight: '1px solid #ddd',
-              cursor: 'pointer'
-            }}
-          >
-            Rotate (R)
-          </button>
-          <button
-            onClick={() => handleModeChange('scale')}
-            style={{ 
-              flex: 1, 
-              padding: '8px', 
-              background: transformMode === 'scale' ? '#4a90e2' : 'transparent',
-              color: transformMode === 'scale' ? 'white' : 'inherit',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            Scale (S)
-          </button>
+
+        {renderInputGroup('Position', 'position', position)}
+        {renderInputGroup('Rotation', 'rotation', rotation)}
+        {renderInputGroup('Scale', 'scale', scale)}
+
+        <div style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+          <strong>Snapping:</strong>
+          <div>
+            <label>
+              <input 
+                type="checkbox" 
+                checked={isSnappingEnabled} 
+                onChange={() => dispatch(toggleSnapping())}
+                disabled={!selectedId} 
+              />
+              Enable Snapping
+            </label>
+          </div>
+          {isSnappingEnabled && (
+            <>
+              <div style={{ marginTop: '5px' }}>
+                <label htmlFor="snap-translate" style={{ marginRight: '5px' }}>Move:</label>
+                <input 
+                  id="snap-translate" 
+                  type="number" 
+                  step="0.01" 
+                  value={snapTranslation} 
+                  onChange={(e) => dispatch(setSnapTranslation(parseFloat(e.target.value) || 0.1))}
+                  disabled={!selectedId} 
+                  style={{ width: '60px' }}
+                /> m
+              </div>
+              <div style={{ marginTop: '5px' }}>
+                <label htmlFor="snap-rotate" style={{ marginRight: '5px' }}>Rotate:</label>
+                <input 
+                  id="snap-rotate" 
+                  type="number" 
+                  step="1" 
+                  value={snapRotation} 
+                  onChange={(e) => dispatch(setSnapRotation(parseInt(e.target.value, 10) || 15))}
+                  disabled={!selectedId} 
+                  style={{ width: '60px' }}
+                /> °
+              </div>
+              <div style={{ marginTop: '5px' }}>
+                <label htmlFor="snap-scale" style={{ marginRight: '5px' }}>Scale:</label>
+                <input 
+                  id="snap-scale" 
+                  type="number" 
+                  step="0.01" 
+                  value={snapScale} 
+                  onChange={(e) => dispatch(setSnapScale(parseFloat(e.target.value) || 0.1))}
+                  disabled={!selectedId} 
+                  style={{ width: '60px' }}
+                />
+              </div>
+            </>
+          )}
         </div>
-        
-        <Vector3Input 
-          label="Position"
-          value={position}
-          onChange={handlePositionChange}
-        />
-        
-        <Vector3Input 
-          label="Rotation"
-          value={rotation}
-          onChange={handleRotationChange}
-        />
-        
-        <Vector3Input 
-          label="Scale"
-          value={scale}
-          onChange={handleScaleChange}
-        />
-        
-        <button 
-          onClick={handleReset} 
-          style={{ marginTop: '12px' }}
-        >
-          Reset Transform
-        </button>
       </div>
     </TransformModeContext.Provider>
   );

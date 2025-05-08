@@ -1,156 +1,148 @@
-import { useState, useRef } from 'react'; // Removed React import
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { updateHexData, updateHexElevation } from '../store/mapSlice'; // Removed setHexData import
+import React, { useState, useCallback } from 'react';
+import { useAppDispatch } from '../store/hooks';
+import { updateHexData } from '../store/mapSlice';
 import SceneCanvas from '../components/3d/SceneCanvas';
-import HexGrid from '../components/map/HexGrid'; // Corrected import path
+import HexGrid from '../components/map/HexGrid';
 import TerrainPalette from '../components/map/TerrainPalette';
-import ElevationPanel from '../components/map/ElevationPanel';
-import { pixelToAxialPointyTop, axialRound, axialToPixelPointyTop } from '../utils/hexGrid';
+import { PointerEventObject, ThreeEvent, useThree } from '@react-three/fiber';
+import { pixelToAxialPointyTop } from '../utils/hexGrid';
 
-export function MapPage() {
+// Size of each hex in world units (must match HexGrid.tsx)
+const HEX_SIZE = 0.5;
+
+const MapPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const hexes = useAppSelector(state => state.map.hexes);
-  const [selectedHex, setSelectedHex] = useState<{ q: number; r: number } | null>(null);
-  const [activeTerrain, setActiveTerrain] = useState<string>('grass');
-  const [painting, setPainting] = useState<boolean>(false);
-  const lastHex = useRef<string | null>(null);
+  const [selectedTerrain, setSelectedTerrain] = useState('grass');
+  const [highlightHex, setHighlightHex] = useState<{ q: number, r: number } | null>(null);
+  const [isPainting, setIsPainting] = useState(false);
+  const [lastPaintedHex, setLastPaintedHex] = useState<string | null>(null);
 
-  const addHex = (q: number, r: number, terrain: string) => {
+  // Function to add a hex with coordinates and the selected terrain
+  const addHex = (q: number, r: number, terrain = selectedTerrain) => {
     dispatch(updateHexData(q, r, terrain));
+    setHighlightHex({ q, r }); // Highlight the last added hex
+    setLastPaintedHex(`${q},${r}`);
   };
 
-  const paintHex = (x: number, y: number) => {
-    const frac = pixelToAxialPointyTop(x, y, 1);
-    const { q, r } = axialRound(frac.q, frac.r);
-    const key = `${q},${r}`;
-    if (lastHex.current === key) return;
-    lastHex.current = key;
-    dispatch(updateHexData(q, r, activeTerrain));
-    // select for elevation
-    setSelectedHex({ q, r });
+  // Add predefined map patterns for testing
+  const addTestPattern = (pattern: string) => {
+    switch (pattern) {
+      case 'ring':
+        // Add a ring of hexes
+        addHex(0, 0, 'water'); // Center
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i;
+          const q = Math.round(Math.cos(angle));
+          const r = Math.round(Math.sin(angle));
+          addHex(q, r, 'grass');
+        }
+        break;
+
+      case 'river':
+        // Create a winding river pattern
+        for (let i = -3; i <= 3; i++) {
+          addHex(i, Math.sin(i) > 0 ? 1 : 0, 'water');
+        }
+        break;
+
+      case 'field':
+        // Create a small field
+        for (let q = -2; q <= 2; q++) {
+          for (let r = -2; r <= 2; r++) {
+            // Skip if the sum is too large (keeps a hexagonal shape)
+            if (Math.abs(q + r) <= 2) {
+              addHex(q, r, 'grass');
+            }
+          }
+        }
+        break;
+
+      case 'clear':
+        setHighlightHex(null); // Clear highlight without dispatching any action
+        break;
+
+      default:
+        break;
+    }
   };
 
-  // Handle elevation change
-  const handleElevationChange = (value: number) => {
-    if (selectedHex) dispatch(updateHexElevation(selectedHex.q, selectedHex.r, value));
+  // Handle painting with pointer events
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    setIsPainting(true);
+    
+    // Get the intersection point in world space
+    const { point } = e;
+    
+    // Convert to hex coordinates
+    const hex = pixelToAxialPointyTop(point.x, point.z, HEX_SIZE);
+    addHex(hex.q, hex.r);
   };
-
-  // Export map data as JSON
-  const exportJSON = () => {
-    const data = JSON.stringify(hexes, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'map-data.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  
+  const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (!isPainting) return;
+    e.stopPropagation();
+    
+    // Get the intersection point in world space
+    const { point } = e;
+    
+    // Convert to hex coordinates
+    const hex = pixelToAxialPointyTop(point.x, point.z, HEX_SIZE);
+    const hexKey = `${hex.q},${hex.r}`;
+    
+    // Only paint if we've moved to a new hex (avoids spamming the same action)
+    if (hexKey !== lastPaintedHex) {
+      addHex(hex.q, hex.r);
+    }
   };
-
-  // Export map view as PNG
-  const exportPNG = () => {
-    // Create offscreen canvas
-    const canvasSize = 500;
-    const canvas = document.createElement('canvas');
-    canvas.width = canvasSize;
-    canvas.height = canvasSize;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    // Determine bounds
-    const coords = Object.values(hexes).map(h => h ? axialToPixelPointyTop(h.q, h.r, 20) : { x: 0, y: 0 }); // Added null check for h
-    const xs = coords.map(p => p.x);
-    const ys = coords.map(p => p.y);
-    const minX = Math.min(...xs);
-    const minY = Math.min(...ys);
-    const maxX = Math.max(...xs);
-    const maxY = Math.max(...ys);
-    const scale = Math.min((canvasSize - 20) / (maxX - minX || 1), (canvasSize - 20) / (maxY - minY || 1));
-    // Draw hexes
-    coords.forEach((p, idx) => {
-      const hex = Object.values(hexes)[idx];
-      if (!hex) return; // Added null check for hex
-      const cx = (p.x - minX) * scale + 10;
-      const cy = (p.y - minY) * scale + 10;
-      const size = 20 * scale;
-      // Draw hexagon
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const angle = Math.PI / 180 * (60 * i - 30);
-        const x = cx + size * Math.cos(angle);
-        const y = cy + size * Math.sin(angle);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      // Fill color based on terrain
-      const colorMap: Record<string, string> = { grass: '#4caf50', water: '#2196f3', sand: '#ffeb3b' };
-      ctx.fillStyle = colorMap[hex.terrain] || '#ccc';
-      ctx.fill();
-      ctx.strokeStyle = '#333';
-      ctx.stroke();
-    });
-    // Download PNG
-    canvas.toBlob(blob => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'map-view.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    });
+  
+  const handlePointerUp = () => {
+    setIsPainting(false);
+    setLastPaintedHex(null);
   };
 
   return (
-    <div className="map-page" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="map-page">
       <h1>Map Editor</h1>
-      {/* Elevation panel for selected hex */}
-      {selectedHex && (
-        <ElevationPanel
-          value={hexes[`${selectedHex.q},${selectedHex.r}`]?.elevation || 0}
-          onChange={handleElevationChange}
+
+      <div className="control-panel" style={{ marginBottom: '20px' }}>
+        <TerrainPalette 
+          selectedTerrain={selectedTerrain}
+          onSelectTerrain={setSelectedTerrain}
         />
-      )}
-      <div style={{ marginBottom: '12px' }}>
-        <button onClick={exportJSON} style={{ marginRight: '8px' }}>Export JSON</button>
-        <button onClick={exportPNG}>Export PNG</button>
+
+        <div className="hex-controls" style={{ marginTop: '20px' }}>
+          <h3>Test Patterns</h3>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+            <button onClick={() => addTestPattern('ring')}>Add Ring</button>
+            <button onClick={() => addTestPattern('river')}>Add River</button>
+            <button onClick={() => addTestPattern('field')}>Add Field</button>
+            <button onClick={() => addTestPattern('clear')}>Clear Highlight</button>
+          </div>
+        </div>
       </div>
-      <TerrainPalette activeTerrain={activeTerrain} onSelect={setActiveTerrain} />
-      <div style={{ padding: '8px', border: '1px solid #ddd', marginBottom: '8px' }}>
-        <h2>Test Controls</h2>
-        <button onClick={() => addHex(0, 0, 'grass')} style={{ marginRight: '8px' }}>
-          Add Grass at (0,0)
-        </button>
-        <button onClick={() => addHex(1, -1, 'water')} style={{ marginRight: '8px' }}>
-          Add Water at (1,-1)
-        </button>
-        <button onClick={() => addHex(-1, 1, 'sand')}>
-          Add Sand at (-1,1)
-        </button>
-      </div>
-      <div style={{ flex: 1, position: 'relative' }}>
+
+      <div style={{ width: '100%', height: '600px', border: '1px solid #333' }}>
         <SceneCanvas>
-          {/* Interactive ground plane for painting */}
-          <mesh
-            rotation-x={-Math.PI / 2}
-            position={[0, 0, 0]}
-            visible={false}
-            onPointerDown={(e) => { e.stopPropagation(); setPainting(true); lastHex.current = null; paintHex(e.point.x, e.point.z); }}
-            onPointerMove={(e) => painting && (e.stopPropagation(), paintHex(e.point.x, e.point.z))}
-            onPointerUp={(e) => { e.stopPropagation(); setPainting(false); lastHex.current = null; }}
+          <HexGrid highlightHex={highlightHex} />
+          
+          {/* Invisible ground plane for painting */}
+          <mesh 
+            rotation={[-Math.PI / 2, 0, 0]} 
+            position={[0, -0.01, 0]}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            receiveShadow
           >
-            <planeGeometry args={[100, 100]} />
+            <planeGeometry args={[50, 50]} />
             <meshBasicMaterial visible={false} />
           </mesh>
-          <HexGrid /> 
         </SceneCanvas>
       </div>
     </div>
   );
-}
+};
 
 export default MapPage;
