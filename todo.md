@@ -165,12 +165,12 @@ Okay, here is a detailed `todo.md` checklist based on the refined iterative impl
   - [x] Implement UI for elevation editing (brush tool, numeric input).
   - [x] Connect UI to dispatch undoable actions updating `HexData.elevation`.
   - [x] Update `HexGrid` `useEffect` to modify instance Y-position based on `elevation`.
-- [ ] **Step 5.2 (Overlays - Basic):**
-  - [ ] Add `overlays: string` field to `HexData` interface.
-  - [ ] Implement UI to add/remove simple overlay identifiers (e.g., 'tree', 'rock') to the stack.
-  - [ ] Enforce stack limit (16) in UI/dispatch logic.
-  - [ ] Render basic visual representation of the *top* overlay (e.g., modify instance color, simple decal).
-  - [ ] Make overlay changes undoable.
+- [x] **Step 5.2 (Overlays - Basic):**
+  - [x] Add `overlays: string` field to `HexData` interface.
+  - [x] Implement UI to add/remove simple overlay identifiers (e.g., 'tree', 'rock') to the stack.
+  - [x] Enforce stack limit (16) in UI/dispatch logic.
+  - [x] Render basic visual representation of the *top* overlay (e.g., modify instance color, simple decal).
+  - [x] Make overlay changes undoable.
 - [ ] **Step 5.3 (3D Preview Mode - Basic):**
   - [ ] Implement UI toggle button (2D/3D).
   - [ ] Store view mode state (e.g., in `mapSlice`).

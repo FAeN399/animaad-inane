@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { updateHexData, updateHexElevation } from '../store/mapSlice';
+import { updateHexData, updateHexElevation, updateHexOverlay, clearHexOverlaysUndoable } from '../store/mapSlice';
 import SceneCanvas from '../components/3d/SceneCanvas';
 import HexGrid from '../components/map/HexGrid';
 import TerrainPalette from '../components/map/TerrainPalette';
@@ -12,13 +12,25 @@ import { exportMapAsJSON, exportMapAsPNG, downloadStringAsFile } from '../utils/
 const HEX_SIZE = 0.5;
 
 // Editing modes for the map editor
-type EditMode = 'terrain' | 'elevation';
+type EditMode = 'terrain' | 'elevation' | 'overlay';
+
+// Available overlay types
+const OVERLAY_TYPES = [
+  { id: 'tree', name: 'Tree', color: '#00AA00' },
+  { id: 'rock', name: 'Rock', color: '#777777' },
+  { id: 'house', name: 'House', color: '#AA5500' },
+  { id: 'tower', name: 'Tower', color: '#AAAAAA' },
+  { id: 'castle', name: 'Castle', color: '#880000' },
+  { id: 'mountain', name: 'Mountain', color: '#555555' }
+];
 
 const MapPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const hexes = useAppSelector(state => state.map.hexes);
   const [selectedTerrain, setSelectedTerrain] = useState('grass');
   const [selectedElevation, setSelectedElevation] = useState(0);
+  const [selectedOverlay, setSelectedOverlay] = useState('tree');
+  const [overlayAction, setOverlayAction] = useState<'add' | 'remove'>('add');
   const [editMode, setEditMode] = useState<EditMode>('terrain');
   const [highlightHex, setHighlightHex] = useState<{ q: number, r: number } | null>(null);
   const [isPainting, setIsPainting] = useState(false);
@@ -44,6 +56,35 @@ const MapPage: React.FC = () => {
       // If hex doesn't exist, create it with the selected terrain and elevation
       dispatch(updateHexData(q, r, selectedTerrain));
       dispatch(updateHexElevation(q, r, elevation));
+      setHighlightHex({ q, r });
+      setLastPaintedHex(key);
+    }
+  };
+
+  // Function to update overlays on a hex
+  const updateOverlay = (q: number, r: number, overlay = selectedOverlay, add = overlayAction === 'add') => {
+    // Make sure the hex exists before updating overlays
+    const key = `${q},${r}`;
+    if (hexes[key]) {
+      dispatch(updateHexOverlay(q, r, overlay, add));
+      setHighlightHex({ q, r }); // Highlight the last edited hex
+      setLastPaintedHex(key);
+    } else {
+      // If hex doesn't exist, create it with the selected terrain first
+      dispatch(updateHexData(q, r, selectedTerrain));
+      if (add) {
+        dispatch(updateHexOverlay(q, r, overlay, true));
+      }
+      setHighlightHex({ q, r });
+      setLastPaintedHex(key);
+    }
+  };
+
+  // Function to clear all overlays from a hex
+  const clearOverlays = (q: number, r: number) => {
+    const key = `${q},${r}`;
+    if (hexes[key] && hexes[key].overlays && hexes[key].overlays.length > 0) {
+      dispatch(clearHexOverlaysUndoable(q, r));
       setHighlightHex({ q, r });
       setLastPaintedHex(key);
     }
@@ -110,6 +151,71 @@ const MapPage: React.FC = () => {
         }
         break;
 
+      case 'forest':
+        // Create a forest with trees
+        // First create a flat base of grass
+        for (let q = -3; q <= 3; q++) {
+          for (let r = -3; r <= 3; r++) {
+            // Skip if the sum is too large (keeps a hexagonal shape)
+            if (Math.abs(q + r) <= 3) {
+              addHex(q, r, 'grass');
+            }
+          }
+        }
+
+        // Now add trees as overlays
+        for (let q = -3; q <= 3; q++) {
+          for (let r = -3; r <= 3; r++) {
+            if (Math.abs(q + r) <= 3) {
+              // Add trees with 70% probability
+              if (Math.random() < 0.7) {
+                updateOverlay(q, r, 'tree', true);
+              }
+            }
+          }
+        }
+        break;
+
+      case 'village':
+        // Create a village with houses and a castle
+        // First create a flat base of grass
+        for (let q = -4; q <= 4; q++) {
+          for (let r = -4; r <= 4; r++) {
+            // Skip if the sum is too large (keeps a hexagonal shape)
+            if (Math.abs(q + r) <= 4) {
+              addHex(q, r, 'grass');
+            }
+          }
+        }
+
+        // Add a castle in the center
+        updateOverlay(0, 0, 'castle', true);
+
+        // Add houses around the castle
+        const housePositions = [
+          { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+          { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
+          { q: 2, r: -1 }, { q: -2, r: 1 }, { q: 1, r: 1 },
+          { q: -1, r: -1 }, { q: 2, r: 0 }, { q: -2, r: 0 }
+        ];
+
+        housePositions.forEach(pos => {
+          updateOverlay(pos.q, pos.r, 'house', true);
+        });
+
+        // Add some trees at the edges
+        for (let q = -4; q <= 4; q++) {
+          for (let r = -4; r <= 4; r++) {
+            if (Math.abs(q + r) <= 4 && Math.abs(q + r) >= 3) {
+              // Add trees with 50% probability
+              if (Math.random() < 0.5) {
+                updateOverlay(q, r, 'tree', true);
+              }
+            }
+          }
+        }
+        break;
+
       case 'clear':
         setHighlightHex(null); // Clear highlight without dispatching any action
         break;
@@ -135,6 +241,14 @@ const MapPage: React.FC = () => {
       addHex(hex.q, hex.r);
     } else if (editMode === 'elevation') {
       updateElevation(hex.q, hex.r);
+    } else if (editMode === 'overlay') {
+      if (e.shiftKey) {
+        // Shift+click to clear all overlays
+        clearOverlays(hex.q, hex.r);
+      } else {
+        // Normal click to add/remove the selected overlay
+        updateOverlay(hex.q, hex.r);
+      }
     }
   };
 
@@ -156,6 +270,9 @@ const MapPage: React.FC = () => {
         addHex(hex.q, hex.r);
       } else if (editMode === 'elevation') {
         updateElevation(hex.q, hex.r);
+      } else if (editMode === 'overlay') {
+        // Don't clear overlays during drag (only on shift+click)
+        updateOverlay(hex.q, hex.r);
       }
     }
   };
@@ -224,6 +341,19 @@ const MapPage: React.FC = () => {
             >
               Elevation
             </button>
+            <button
+              onClick={() => setEditMode('overlay')}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: editMode === 'overlay' ? '#FF9800' : '#e0e0e0',
+                color: editMode === 'overlay' ? 'white' : 'black',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Overlays
+            </button>
           </div>
         </div>
 
@@ -275,6 +405,72 @@ const MapPage: React.FC = () => {
           </div>
         )}
 
+        {/* Overlay Controls (shown when in overlay mode) */}
+        {editMode === 'overlay' && (
+          <div className="overlay-controls">
+            <h3>Overlays</h3>
+
+            {/* Add/Remove Toggle */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+              <button
+                onClick={() => setOverlayAction('add')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: overlayAction === 'add' ? '#4CAF50' : '#e0e0e0',
+                  color: overlayAction === 'add' ? 'white' : 'black',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                Add
+              </button>
+              <button
+                onClick={() => setOverlayAction('remove')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: overlayAction === 'remove' ? '#F44336' : '#e0e0e0',
+                  color: overlayAction === 'remove' ? 'white' : 'black',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                Remove
+              </button>
+            </div>
+
+            {/* Overlay Type Selection */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
+              {OVERLAY_TYPES.map(overlay => (
+                <button
+                  key={overlay.id}
+                  onClick={() => setSelectedOverlay(overlay.id)}
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: selectedOverlay === overlay.id ? overlay.color : '#e0e0e0',
+                    color: selectedOverlay === overlay.id ? 'white' : 'black',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    minWidth: '80px'
+                  }}
+                >
+                  {overlay.name}
+                </button>
+              ))}
+            </div>
+
+            <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+              Click to add/remove overlays. Shift+click to clear all overlays from a hex.
+              <br />
+              Maximum 16 overlays per hex. Only the top overlay is shown.
+            </p>
+          </div>
+        )}
+
         <div className="hex-controls" style={{ marginTop: '20px' }}>
           <h3>Test Patterns</h3>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
@@ -282,6 +478,8 @@ const MapPage: React.FC = () => {
             <button onClick={() => addTestPattern('river')}>Add River</button>
             <button onClick={() => addTestPattern('field')}>Add Field</button>
             <button onClick={() => addTestPattern('hill')}>Add Hill</button>
+            <button onClick={() => addTestPattern('forest')}>Add Forest</button>
+            <button onClick={() => addTestPattern('village')}>Add Village</button>
             <button onClick={() => addTestPattern('clear')}>Clear Highlight</button>
           </div>
         </div>

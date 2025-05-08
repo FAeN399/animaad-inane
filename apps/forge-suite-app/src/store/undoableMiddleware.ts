@@ -1,12 +1,20 @@
 import { Middleware } from '@reduxjs/toolkit';
 import { push, undo, redo } from './undoableSlice';
 import { restoreRingAndElements } from './mandalaSlice';
+import { restoreHexOverlays } from './mapSlice';
 
 export const undoableMiddleware: Middleware = storeAPI => next => action => {
   // Handle special case for RESTORE_RING_AND_ELEMENTS
   if (action.type === 'RESTORE_RING_AND_ELEMENTS') {
     const { ring, elements } = action.payload;
     storeAPI.dispatch(restoreRingAndElements(ring, elements));
+    return;
+  }
+
+  // Handle special case for RESTORE_HEX_OVERLAYS
+  if (action.type === 'RESTORE_HEX_OVERLAYS') {
+    const { q, r, overlays } = action.payload;
+    storeAPI.dispatch(restoreHexOverlays(q, r, overlays));
     return;
   }
 
