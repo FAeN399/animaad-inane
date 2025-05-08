@@ -139,10 +139,10 @@ Okay, here is a detailed `todo.md` checklist based on the refined iterative impl
   - [x] Payload must include previous state of the hex being modified.
   - [x] Update `undoableMiddleware` to handle map hex data changes.
   - [x] *Manual Test:* Verify terrain painting is undoable/redoable.
-- [ ] **Step 3.5 (Basic Export - PNG/JSON):**
-  - [ ] Implement PNG export function (render 2D map view to image).
-  - [ ] Implement JSON export function (serialize `hexes` data).
-  - [ ] Add basic UI buttons in `MapPage` for these exports.
+- [x] **Step 3.5 (Basic Export - PNG/JSON):**
+  - [x] Implement PNG export function (render 2D map view to image).
+  - [x] Implement JSON export function (serialize `hexes` data).
+  - [x] Add basic UI buttons in `MapPage` for these exports.
 
 ## Phase 4: Mandala Module MVP (Sprint 3)
 
