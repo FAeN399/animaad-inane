@@ -1,6 +1,13 @@
+export interface RingStyle {
+  color: string;
+  strokeWidth: number;
+  opacity: number;
+}
+
 export interface RingSpec {
   id: string;
   symmetry: number;
+  style: RingStyle;
 }
 
 export interface ElementSpec {
@@ -8,6 +15,7 @@ export interface ElementSpec {
   ringId: string;
   angle: number; // radians
   type: 'circle';
+  styleOverride?: RingStyle; // Optional override of ring-wide style
 }
 
 export interface MandalaState {

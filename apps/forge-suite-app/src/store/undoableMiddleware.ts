@@ -1,7 +1,21 @@
 import { Middleware } from '@reduxjs/toolkit';
 import { push, undo, redo } from './undoableSlice';
+import { restoreRingAndElements } from './mandalaSlice';
 
 export const undoableMiddleware: Middleware = storeAPI => next => action => {
+  // Handle special case for RESTORE_RING_AND_ELEMENTS
+  if (action.type === 'RESTORE_RING_AND_ELEMENTS') {
+    const { ring, elements } = action.payload;
+    storeAPI.dispatch(restoreRingAndElements(ring, elements));
+    return;
+  }
+
+  // Handle special case for RECORD_UNDOABLE (just record, don't execute)
+  if (action.type === 'RECORD_UNDOABLE' && action.meta?.undoable) {
+    next(push({ undoAction: action.meta.undoable.undo, redoAction: action.meta.undoable.redo }));
+    return;
+  }
+
   if (action.type === undo.type) {
     // Apply the recorded undo action first
     const stateBefore = storeAPI.getState() as any;

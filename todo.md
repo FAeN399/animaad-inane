@@ -1,5 +1,5 @@
 Okay, here is a detailed `todo.md` checklist based on the refined iterative implementation blueprint. You can copy and paste this into a `todo.md` file in your project root.
-
+#check techconcerns
 # Forge Suite - Implementation Checklist (v1.1)
 
 ## Phase 0: Foundation (Sprint 0)
@@ -149,8 +149,13 @@ Okay, here is a detailed `todo.md` checklist based on the refined iterative impl
 - [x] **Step 4.1 (Canvas & Ring Setup):**
 - [x] **Step 4.2 (Radial Symmetry Drawing - Basic):**
 - [x] **Step 4.3 (Element Types - Basic):**
-- [ ] **Step 4.4 (Styling - Ring-wide):**
-- [ ] **Step 4.5 (Undo/Redo - Mandala Basic):**
+- [x] **Step 4.4 (Styling - Ring-wide):**
+  - [x] Implement UI to select a color/style for an entire ring.
+  - [x] Apply this style to all elements within that ring.
+  - [x] Store in Redux.
+- [x] **Step 4.5 (Undo/Redo - Mandala Basic):**
+  - [x] Integrate Undo/Redo for adding rings, adding elements, changing ring symmetry, and applying ring-wide styles.
+  - [x] Make all mandala operations undoable.
 - [x] **Step 4.6 (2D Export - PNG):**
 
 ## Phase 5: Map Editor Polish (Sprints 6-7)

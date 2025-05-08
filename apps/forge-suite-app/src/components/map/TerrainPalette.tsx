@@ -18,7 +18,7 @@ export interface TerrainPaletteProps {
 /**
  * TerrainPalette component for selecting terrain types in the map editor
  */
-const TerrainPalette: React.FC<TerrainPaletteProps> = ({ 
+const TerrainPalette: React.FC<TerrainPaletteProps> = ({
   selectedTerrain,
   onSelectTerrain
 }) => {
@@ -27,8 +27,9 @@ const TerrainPalette: React.FC<TerrainPaletteProps> = ({
       <h3>Terrain</h3>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
         {TERRAIN_TYPES.map(terrain => (
-          <div 
+          <div
             key={terrain.id}
+            data-testid={`terrain-${terrain.id}`}
             onClick={() => onSelectTerrain(terrain.id)}
             style={{
               background: terrain.color,
