@@ -160,11 +160,11 @@ Okay, here is a detailed `todo.md` checklist based on the refined iterative impl
 
 ## Phase 5: Map Editor Polish (Sprints 6-7)
 
-- [ ] **Step 5.1 (Elevation Editing):**
-  - [ ] Add `elevation: number` field to `HexData` interface.
-  - [ ] Implement UI for elevation editing (brush tool, numeric input).
-  - [ ] Connect UI to dispatch undoable actions updating `HexData.elevation`.
-  - [ ] Update `HexGrid` `useEffect` to modify instance Y-position based on `elevation`.
+- [x] **Step 5.1 (Elevation Editing):**
+  - [x] Add `elevation: number` field to `HexData` interface.
+  - [x] Implement UI for elevation editing (brush tool, numeric input).
+  - [x] Connect UI to dispatch undoable actions updating `HexData.elevation`.
+  - [x] Update `HexGrid` `useEffect` to modify instance Y-position based on `elevation`.
 - [ ] **Step 5.2 (Overlays - Basic):**
   - [ ] Add `overlays: string` field to `HexData` interface.
   - [ ] Implement UI to add/remove simple overlay identifiers (e.g., 'tree', 'rock') to the stack.
