@@ -213,7 +213,7 @@ describe('geometry slice', () => {
 
     vi.mock('three/examples/jsm/exporters/GLTFExporter', () => ({
       GLTFExporter: class {
-        parse(object, onDone) {
+        parse(_object: unknown, onDone: (result: ArrayBuffer) => void) {
           onDone(new ArrayBuffer(16));
         }
       }
