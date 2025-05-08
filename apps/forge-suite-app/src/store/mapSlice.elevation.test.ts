@@ -5,17 +5,18 @@ import undoableReducer from './undoableSlice';
 import { undoableMiddleware } from './undoableMiddleware';
 
 describe('mapSlice elevation features', () => {
-  const initialState: MapState = { 
+  const initialState: MapState = {
     hexes: {
       '0,0': { q: 0, r: 0, terrain: 'grass' },
       '1,0': { q: 1, r: 0, terrain: 'water' }
-    } 
+    },
+    viewMode: '2d'
   };
 
   it('should handle setHexElevation', () => {
     const action = setHexElevation({ q: 0, r: 0, elevation: 3 });
     const state = mapReducer(initialState, action);
-    
+
     expect(state.hexes['0,0'].elevation).toBe(3);
     expect(state.hexes['1,0'].elevation).toBeUndefined(); // Other hex unchanged
   });
@@ -23,7 +24,7 @@ describe('mapSlice elevation features', () => {
   it('should ignore setHexElevation for non-existent hex', () => {
     const action = setHexElevation({ q: 99, r: 99, elevation: 3 });
     const state = mapReducer(initialState, action);
-    
+
     // State should be unchanged
     expect(state).toEqual(initialState);
   });
@@ -35,7 +36,7 @@ describe('mapSlice elevation features', () => {
         map: mapReducer,
         undoable: undoableReducer
       },
-      middleware: (getDefaultMiddleware) => 
+      middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware().concat(undoableMiddleware),
       preloadedState: {
         map: initialState,
@@ -60,10 +61,10 @@ describe('mapSlice elevation features', () => {
         undoable: expect.objectContaining({
           undo: expect.objectContaining({
             type: setHexElevation.type,
-            payload: expect.objectContaining({ 
-              q: 0, 
-              r: 0, 
-              elevation: expect.any(Number) 
+            payload: expect.objectContaining({
+              q: 0,
+              r: 0,
+              elevation: expect.any(Number)
             })
           }),
           redo: expect.objectContaining({
@@ -91,8 +92,8 @@ describe('mapSlice elevation features', () => {
       meta: expect.objectContaining({
         undoable: expect.objectContaining({
           undo: expect.objectContaining({
-            payload: expect.objectContaining({ 
-              elevation: 0 
+            payload: expect.objectContaining({
+              elevation: 0
             })
           })
         })

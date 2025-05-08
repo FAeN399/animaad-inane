@@ -2,14 +2,19 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { HexData } from '../interfaces/MapData';
 import type { RootState, AppDispatch } from './store';
 
+// Define view mode type
+export type ViewMode = '2d' | '3d';
+
 // Define the state type
 export interface MapState {
   hexes: Record<string, HexData>;
+  viewMode: ViewMode;
 }
 
 // Define the initial state
 const initialState: MapState = {
-  hexes: {}
+  hexes: {},
+  viewMode: '2d'
 };
 
 // Create the slice
@@ -75,6 +80,16 @@ export const mapSlice = createSlice({
       if (state.hexes[key]) {
         delete state.hexes[key].overlays;
       }
+    },
+    // Toggle or set the view mode
+    setViewMode: (state, action: PayloadAction<ViewMode | undefined>) => {
+      // If no mode is provided, toggle between 2d and 3d
+      if (action.payload === undefined) {
+        state.viewMode = state.viewMode === '2d' ? '3d' : '2d';
+      } else {
+        // Otherwise set to the specified mode
+        state.viewMode = action.payload;
+      }
     }
   },
   extraReducers: builder => {
@@ -89,7 +104,8 @@ export const {
   setHexElevation,
   addHexOverlay,
   removeHexOverlay,
-  clearHexOverlays
+  clearHexOverlays,
+  setViewMode
 } = mapSlice.actions;
 
 // Thunk for painting hex with undo/redo

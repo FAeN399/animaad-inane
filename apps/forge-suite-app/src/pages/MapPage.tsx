@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { updateHexData, updateHexElevation, updateHexOverlay, clearHexOverlaysUndoable } from '../store/mapSlice';
-import SceneCanvas from '../components/3d/SceneCanvas';
+import { updateHexData, updateHexElevation, updateHexOverlay, clearHexOverlaysUndoable, setViewMode } from '../store/mapSlice';
+import MapSceneCanvas from '../components/map/MapSceneCanvas';
 import HexGrid from '../components/map/HexGrid';
 import TerrainPalette from '../components/map/TerrainPalette';
 import { PointerEventObject, ThreeEvent, useThree } from '@react-three/fiber';
@@ -27,6 +27,7 @@ const OVERLAY_TYPES = [
 const MapPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const hexes = useAppSelector(state => state.map.hexes);
+  const viewMode = useAppSelector(state => state.map.viewMode);
   const [selectedTerrain, setSelectedTerrain] = useState('grass');
   const [selectedElevation, setSelectedElevation] = useState(0);
   const [selectedOverlay, setSelectedOverlay] = useState('tree');
@@ -36,6 +37,11 @@ const MapPage: React.FC = () => {
   const [isPainting, setIsPainting] = useState(false);
   const [lastPaintedHex, setLastPaintedHex] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Toggle between 2D and 3D view modes
+  const toggleViewMode = () => {
+    dispatch(setViewMode());
+  };
 
   // Function to add a hex with coordinates and the selected terrain
   const addHex = (q: number, r: number, terrain = selectedTerrain) => {
@@ -496,8 +502,31 @@ const MapPage: React.FC = () => {
         </div>
       </div>
 
+      {/* View Mode Toggle */}
+      <div style={{ marginBottom: '20px' }}>
+        <h3>View Mode</h3>
+        <button
+          onClick={toggleViewMode}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: viewMode === '3d' ? '#FF9800' : '#2196F3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          {viewMode === '2d' ? 'Switch to 3D View' : 'Switch to 2D View'}
+        </button>
+        <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>
+          {viewMode === '2d'
+            ? '2D view is optimized for editing. Switch to 3D to see elevation changes in perspective.'
+            : '3D view shows elevation. You can rotate the camera to see the map from different angles.'}
+        </p>
+      </div>
+
       <div ref={canvasRef} style={{ width: '100%', height: '600px', border: '1px solid #333' }}>
-        <SceneCanvas>
+        <MapSceneCanvas>
           <HexGrid highlightHex={highlightHex} />
 
           {/* Invisible ground plane for painting */}
@@ -513,7 +542,7 @@ const MapPage: React.FC = () => {
             <planeGeometry args={[50, 50]} />
             <meshBasicMaterial visible={false} />
           </mesh>
-        </SceneCanvas>
+        </MapSceneCanvas>
       </div>
     </div>
   );

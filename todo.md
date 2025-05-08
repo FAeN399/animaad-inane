@@ -171,10 +171,10 @@ Okay, here is a detailed `todo.md` checklist based on the refined iterative impl
   - [x] Enforce stack limit (16) in UI/dispatch logic.
   - [x] Render basic visual representation of the *top* overlay (e.g., modify instance color, simple decal).
   - [x] Make overlay changes undoable.
-- [ ] **Step 5.3 (3D Preview Mode - Basic):**
-  - [ ] Implement UI toggle button (2D/3D).
-  - [ ] Store view mode state (e.g., in `mapSlice`).
-  - [ ] Conditionally adjust camera type/position based on view mode.
+- [x] **Step 5.3 (3D Preview Mode - Basic):**
+  - [x] Implement UI toggle button (2D/3D).
+  - [x] Store view mode state (e.g., in `mapSlice`).
+  - [x] Conditionally adjust camera type/position based on view mode.
   - [ ] In 3D mode, modify `HexGrid` rendering:
     - [ ] Extrude hex geometry based on elevation.
     - [ ] Render overlays as simple 3D placeholders (sprites/boxes).

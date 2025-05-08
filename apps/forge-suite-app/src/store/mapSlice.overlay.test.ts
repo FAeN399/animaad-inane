@@ -1,28 +1,29 @@
 import { describe, it, expect, vi } from 'vitest';
-import mapReducer, { 
-  addHexOverlay, 
-  removeHexOverlay, 
+import mapReducer, {
+  addHexOverlay,
+  removeHexOverlay,
   clearHexOverlays,
   updateHexOverlay,
   clearHexOverlaysUndoable,
-  MapState 
+  MapState
 } from './mapSlice';
 import { configureStore } from '@reduxjs/toolkit';
 import undoableReducer from './undoableSlice';
 import { undoableMiddleware } from './undoableMiddleware';
 
 describe('mapSlice overlay features', () => {
-  const initialState: MapState = { 
+  const initialState: MapState = {
     hexes: {
       '0,0': { q: 0, r: 0, terrain: 'grass' },
       '1,0': { q: 1, r: 0, terrain: 'water', overlays: ['tree'] }
-    } 
+    },
+    viewMode: '2d'
   };
 
   it('should handle addHexOverlay', () => {
     const action = addHexOverlay({ q: 0, r: 0, overlay: 'tree' });
     const state = mapReducer(initialState, action);
-    
+
     expect(state.hexes['0,0'].overlays).toEqual(['tree']);
     expect(state.hexes['1,0'].overlays).toEqual(['tree']); // Unchanged
   });
@@ -30,25 +31,25 @@ describe('mapSlice overlay features', () => {
   it('should not add duplicate overlays', () => {
     const action = addHexOverlay({ q: 1, r: 0, overlay: 'tree' });
     const state = mapReducer(initialState, action);
-    
+
     expect(state.hexes['1,0'].overlays).toEqual(['tree']); // Still just one tree
   });
 
   it('should enforce the stack limit of 16 overlays', () => {
     let state = { ...initialState };
-    
+
     // Add 16 different overlays
     for (let i = 0; i < 16; i++) {
       const action = addHexOverlay({ q: 0, r: 0, overlay: `overlay${i}` });
       state = mapReducer(state, action);
     }
-    
+
     expect(state.hexes['0,0'].overlays?.length).toBe(16);
-    
+
     // Try to add one more
     const action = addHexOverlay({ q: 0, r: 0, overlay: 'one_too_many' });
     state = mapReducer(state, action);
-    
+
     // Should still be 16
     expect(state.hexes['0,0'].overlays?.length).toBe(16);
     expect(state.hexes['0,0'].overlays).not.toContain('one_too_many');
@@ -57,27 +58,27 @@ describe('mapSlice overlay features', () => {
   it('should handle removeHexOverlay', () => {
     const action = removeHexOverlay({ q: 1, r: 0, overlay: 'tree' });
     const state = mapReducer(initialState, action);
-    
+
     expect(state.hexes['1,0'].overlays).toBeUndefined();
   });
 
   it('should handle clearHexOverlays', () => {
     // First add multiple overlays
     let state = mapReducer(
-      initialState, 
+      initialState,
       addHexOverlay({ q: 0, r: 0, overlay: 'tree' })
     );
     state = mapReducer(
-      state, 
+      state,
       addHexOverlay({ q: 0, r: 0, overlay: 'rock' })
     );
-    
+
     // Then clear them
     state = mapReducer(
-      state, 
+      state,
       clearHexOverlays({ q: 0, r: 0 })
     );
-    
+
     expect(state.hexes['0,0'].overlays).toBeUndefined();
   });
 
@@ -88,7 +89,7 @@ describe('mapSlice overlay features', () => {
         map: mapReducer,
         undoable: undoableReducer
       },
-      middleware: (getDefaultMiddleware) => 
+      middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware().concat(undoableMiddleware),
       preloadedState: {
         map: initialState,
@@ -158,16 +159,16 @@ describe('mapSlice overlay features', () => {
     const stateWithOverlays = {
       map: {
         hexes: {
-          '0,0': { 
-            q: 0, 
-            r: 0, 
-            terrain: 'grass', 
-            overlays: ['tree', 'rock', 'house'] 
+          '0,0': {
+            q: 0,
+            r: 0,
+            terrain: 'grass',
+            overlays: ['tree', 'rock', 'house']
           }
         }
       }
     };
-    
+
     const dispatch = vi.fn();
     const getState = vi.fn().mockReturnValue(stateWithOverlays);
 
@@ -182,10 +183,10 @@ describe('mapSlice overlay features', () => {
         undoable: expect.objectContaining({
           undo: expect.objectContaining({
             type: 'RESTORE_HEX_OVERLAYS',
-            payload: expect.objectContaining({ 
-              q: 0, 
-              r: 0, 
-              overlays: ['tree', 'rock', 'house'] 
+            payload: expect.objectContaining({
+              q: 0,
+              r: 0,
+              overlays: ['tree', 'rock', 'house']
             })
           }),
           redo: expect.objectContaining({
