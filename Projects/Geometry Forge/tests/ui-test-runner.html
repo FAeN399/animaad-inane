@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry Forge UI Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-container {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-suite {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .test-result {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #e6ffe6;
+            color: #006600;
+        }
+        .test-fail {
+            background-color: #ffe6e6;
+            color: #cc0000;
+        }
+        .error-details {
+            font-family: monospace;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-left: 3px solid #cc0000;
+            margin-top: 5px;
+            white-space: pre-wrap;
+        }
+        .summary {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .preview-container {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .preview-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #panel-preview {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Geometry Forge UI Tests</h1>
+    <div class="test-container" id="test-results">
+        <p>Running tests...</p>
+    </div>
+    
+    <div class="preview-container">
+        <div class="preview-title">Item Library Panel Preview:</div>
+        <div id="panel-preview"></div>
+    </div>
+
+    <script type="module">
+        import * as THREE from '../node_modules/three/build/three.module.js';
+        
+        // Mock App for testing
+        const mockApp = {
+            addItemFromLibrary: (itemId) => {
+                console.log(`Mock adding item: ${itemId}`);
+                return true;
+            },
+            scene: new THREE.Scene(),
+            selectObject: () => {}
+        };
+        
+        // Import the module we want to test
+        import { setupItemLibraryPanel, togglePanel } from '../src/ui/itemLibraryPanel.js';
+
+        // Test utilities
+        const results = [];
+        let passCount = 0;
+        let failCount = 0;
+
+        function describe(description, fn) {
+            const suiteResults = {
+                description,
+                tests: []
+            };
+            results.push(suiteResults);
+            
+            // Store current suite to add tests to
+            const currentSuite = suiteResults;
+            
+            fn();
+        }
+
+        function test(description, fn) {
+            const currentSuite = results[results.length - 1];
+            try {
+                fn();
+                currentSuite.tests.push({
+                    description,
+                    passed: true
+                });
+                passCount++;
+            } catch (error) {
+                currentSuite.tests.push({
+                    description,
+                    passed: false,
+                    error: error.message || error
+                });
+                failCount++;
+            }
+        }
+
+        function expect(actual) {
+            return {
+                toBe(expected) {
+                    if (actual !== expected) {
+                        throw new Error(`Expected ${expected} but got ${actual}`);
+                    }
+                },
+                toEqual(expected) {
+                    const actualStr = JSON.stringify(actual);
+                    const expectedStr = JSON.stringify(expected);
+                    if (actualStr !== expectedStr) {
+                        throw new Error(`Expected ${expectedStr} but got ${actualStr}`);
+                    }
+                },
+                toBeDefined() {
+                    if (actual === undefined) {
+                        throw new Error('Expected value to be defined');
+                    }
+                },
+                toBeInstanceOf(expected) {
+                    if (!(actual instanceof expected)) {
+                        throw new Error(`Expected instance of ${expected.name} but got ${actual.constructor.name}`);
+                    }
+                },
+                toBeNull() {
+                    if (actual !== null) {
+                        throw new Error(`Expected null but got ${actual}`);
+                    }
+                },
+                not: {
+                    toBeNull() {
+                        if (actual === null) {
+                            throw new Error('Expected not null');
+                        }
+                    }
+                }
+            };
+        }
+
+        // Run tests
+        describe('Item Library Panel', () => {
+            // Setup for tests
+            const panelPreview = document.getElementById('panel-preview');
+            
+            test('setupItemLibraryPanel should create a panel', () => {
+                // Setup the panel in our preview container
+                panelPreview.innerHTML = '';
+                document.body = panelPreview;
+                
+                setupItemLibraryPanel(mockApp);
+                
+                const panel = document.getElementById('item-library-panel');
+                expect(panel).not.toBeNull();
+                
+                // Check panel structure
+                expect(panel.querySelector('#item-library-content')).not.toBeNull();
+            });
+
+            test('Panel should contain category sections', () => {
+                const panel = document.getElementById('item-library-panel');
+                const content = panel.querySelector('#item-library-content');
+                
+                // Wait a bit for async operations
+                setTimeout(() => {
+                    const sections = content.querySelectorAll('.test-suite');
+                    expect(sections.length).toBeGreaterThan(0);
+                }, 100);
+            });
+
+            test('togglePanel should change panel visibility', () => {
+                const panel = document.getElementById('item-library-panel');
+                
+                // Initial state should be hidden
+                expect(panel.classList.contains('translate-x-full')).toBe(true);
+                
+                // Toggle to visible
+                togglePanel();
+                expect(panel.classList.contains('translate-x-full')).toBe(false);
+                
+                // Toggle back to hidden
+                togglePanel();
+                expect(panel.classList.contains('translate-x-full')).toBe(true);
+            });
+        });
+
+        // Render results
+        function renderResults() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = '';
+            
+            results.forEach(suite => {
+                const suiteEl = document.createElement('div');
+                suiteEl.className = 'test-suite';
+                suiteEl.innerHTML = `<h2>${suite.description}</h2>`;
+                
+                suite.tests.forEach(test => {
+                    const testEl = document.createElement('div');
+                    testEl.className = `test-result ${test.passed ? 'test-pass' : 'test-fail'}`;
+                    
+                    if (test.passed) {
+                        testEl.innerHTML = `✓ ${test.description}`;
+                    } else {
+                        testEl.innerHTML = `✗ ${test.description}`;
+                        const errorEl = document.createElement('div');
+                        errorEl.className = 'error-details';
+                        errorEl.textContent = test.error;
+                        testEl.appendChild(errorEl);
+                    }
+                    
+                    suiteEl.appendChild(testEl);
+                });
+                
+                container.appendChild(suiteEl);
+            });
+            
+            // Add summary
+            const summaryEl = document.createElement('div');
+            summaryEl.className = 'summary';
+            summaryEl.textContent = `${passCount} tests passed, ${failCount} tests failed`;
+            container.appendChild(summaryEl);
+        }
+
+        // Run tests and render results
+        setTimeout(renderResults, 500);
+    </script>
+</body>
+</html>

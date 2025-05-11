@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry Forge Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-container {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-suite {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .test-result {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #e6ffe6;
+            color: #006600;
+        }
+        .test-fail {
+            background-color: #ffe6e6;
+            color: #cc0000;
+        }
+        .error-details {
+            font-family: monospace;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-left: 3px solid #cc0000;
+            margin-top: 5px;
+            white-space: pre-wrap;
+        }
+        .summary {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .category-list {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Geometry Forge Item Library Tests</h1>
+    <div class="test-container" id="test-results">
+        <p>Running tests...</p>
+    </div>
+
+    <script type="module">
+        import * as THREE from '../node_modules/three/build/three.module.js';
+        import { getAllItems } from '../src/core/itemLibrary.js';
+
+        // Test utilities
+        const results = [];
+        let passCount = 0;
+        let failCount = 0;
+
+        function describe(description, fn) {
+            const suiteResults = {
+                description,
+                tests: []
+            };
+            results.push(suiteResults);
+            
+            // Store current suite to add tests to
+            const currentSuite = suiteResults;
+            
+            fn();
+        }
+
+        function test(description, fn) {
+            const currentSuite = results[results.length - 1];
+            try {
+                fn();
+                currentSuite.tests.push({
+                    description,
+                    passed: true
+                });
+                passCount++;
+            } catch (error) {
+                currentSuite.tests.push({
+                    description,
+                    passed: false,
+                    error: error.message || error
+                });
+                failCount++;
+            }
+        }
+
+        function expect(actual) {
+            return {
+                toBe(expected) {
+                    if (actual !== expected) {
+                        throw new Error(`Expected ${expected} but got ${actual}`);
+                    }
+                },
+                toEqual(expected) {
+                    const actualStr = JSON.stringify(actual);
+                    const expectedStr = JSON.stringify(expected);
+                    if (actualStr !== expectedStr) {
+                        throw new Error(`Expected ${expectedStr} but got ${actualStr}`);
+                    }
+                },
+                toBeDefined() {
+                    if (actual === undefined) {
+                        throw new Error('Expected value to be defined');
+                    }
+                },
+                toBeInstanceOf(expected) {
+                    if (!(actual instanceof expected)) {
+                        throw new Error(`Expected instance of ${expected.name} but got ${actual.constructor.name}`);
+                    }
+                },
+                toHaveLength(expected) {
+                    if (actual.length !== expected) {
+                        throw new Error(`Expected length ${expected} but got ${actual.length}`);
+                    }
+                },
+                toBeGreaterThan(expected) {
+                    if (actual <= expected) {
+                        throw new Error(`Expected value greater than ${expected} but got ${actual}`);
+                    }
+                }
+            };
+        }
+
+        // Run tests
+        describe('Item Library', () => {
+            test('getAllItems should return an array of items', () => {
+                const items = getAllItems();
+                expect(items).toBeDefined();
+                expect(Array.isArray(items)).toBe(true);
+                expect(items.length).toBeGreaterThan(0);
+            });
+
+            test('Each item should have required properties', () => {
+                const items = getAllItems();
+                items.forEach(item => {
+                    expect(item.id).toBeDefined();
+                    expect(item.name).toBeDefined();
+                    expect(item.category).toBeDefined();
+                    expect(item.description).toBeDefined();
+                    expect(typeof item.generator).toBe('function');
+                });
+            });
+
+            test('Item generators should create valid objects', () => {
+                const items = getAllItems();
+                items.forEach(item => {
+                    const obj = item.generator();
+                    expect(obj).toBeDefined();
+                    expect(obj instanceof THREE.Object3D).toBe(true);
+                });
+            });
+
+            test('Items should be organized in categories', () => {
+                const items = getAllItems();
+                const categories = new Set();
+                items.forEach(item => categories.add(item.category));
+                
+                expect(categories.size).toBeGreaterThan(0);
+                
+                // Store categories for display
+                window.testCategories = Array.from(categories);
+            });
+
+            test('There should be 20 items in total', () => {
+                const items = getAllItems();
+                expect(items.length).toBe(20);
+            });
+        });
+
+        // Render results
+        function renderResults() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = '';
+            
+            results.forEach(suite => {
+                const suiteEl = document.createElement('div');
+                suiteEl.className = 'test-suite';
+                suiteEl.innerHTML = `<h2>${suite.description}</h2>`;
+                
+                suite.tests.forEach(test => {
+                    const testEl = document.createElement('div');
+                    testEl.className = `test-result ${test.passed ? 'test-pass' : 'test-fail'}`;
+                    
+                    if (test.passed) {
+                        testEl.innerHTML = `✓ ${test.description}`;
+                    } else {
+                        testEl.innerHTML = `✗ ${test.description}`;
+                        const errorEl = document.createElement('div');
+                        errorEl.className = 'error-details';
+                        errorEl.textContent = test.error;
+                        testEl.appendChild(errorEl);
+                    }
+                    
+                    suiteEl.appendChild(testEl);
+                });
+                
+                container.appendChild(suiteEl);
+            });
+            
+            // Add categories if available
+            if (window.testCategories && window.testCategories.length > 0) {
+                const categoriesEl = document.createElement('div');
+                categoriesEl.innerHTML = `<h3>Item Categories:</h3>`;
+                const listEl = document.createElement('div');
+                listEl.className = 'category-list';
+                listEl.textContent = window.testCategories.join(', ');
+                categoriesEl.appendChild(listEl);
+                container.appendChild(categoriesEl);
+            }
+            
+            // Add summary
+            const summaryEl = document.createElement('div');
+            summaryEl.className = 'summary';
+            summaryEl.textContent = `${passCount} tests passed, ${failCount} tests failed`;
+            container.appendChild(summaryEl);
+        }
+
+        // Run tests and render results
+        setTimeout(renderResults, 100);
+    </script>
+</body>
+</html>
